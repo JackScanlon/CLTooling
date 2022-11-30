@@ -7,6 +7,12 @@ from copy import deepcopy
 from scraper import BasicScraper
 from utils import PHENOTYPE_IN, CONCEPT_IN, COMPONENT_IN, CODING_LKUP
 
+AGREEMENT_DATE = "October 1st, 2018"
+MODIFIED_DATE = "October 30th, 2022"
+LIST_PREFIX = " - "
+CAM_DESC = "CPRD Gold code list version 1.1 created by CPRD @ Cambridge research group (available at https://www.phpc.cam.ac.uk/pcu/research/research-groups/crmh/cprd_cam/codelists/v11/)"
+CITE_REQ = ""
+
 class Utils:
   @staticmethod
   def try_load_df(path):
@@ -228,17 +234,42 @@ class CambridgePhenotypeBuilder:
       return self.descriptors[system][code]
     
     return ''
+  
+  def transform_desc(self, desc, provenance, prevalence, usage):
+    if desc is not None and desc != "":
+      desc = f"# Summary\n{LIST_PREFIX}{CAM_DESC}\n{LIST_PREFIX}{desc}\n"
+    else:
+      desc = f"# Summary\n{LIST_PREFIX}{CAM_DESC}\n"
+    
+    if provenance is not None and provenance != "":
+      provenance = f"# Provenance\n{LIST_PREFIX}{provenance}\n"
+    else:
+      provenance = ""
+    
+    if prevalence is not None and prevalence != "":
+      prevalence = f"# Prevalence\n{LIST_PREFIX}{prevalence}%\n"
+    else:
+      prevalence = ""
+    
+    if usage is not None and usage != "":
+      usage = f"# Usage\n{LIST_PREFIX}{usage}\n"
+    else:
+      usage = ""
+    
+    return f"{desc}{provenance}{prevalence}{usage}\n"
 
   def transform_data(self, row, codelists, publications=None):
     phenotype = deepcopy(PHENOTYPE_IN)
     phenotype['title'] = row['name']
     phenotype['name'] = row['name']
     phenotype['author'] = self.author
-    phenotype['description'] = row['desc']
     phenotype['sex'] = 'Male/Female'
     phenotype['type'] = 'Disease or Syndrome'
     phenotype['source_reference'] = self.url
     phenotype['data_sources'] = [5]
+    phenotype['hdr_created_date'] = AGREEMENT_DATE
+    phenotype['hdr_modified_date'] = MODIFIED_DATE
+    phenotype['description'] = self.transform_desc(row['desc'], row['provenance'], row['prevalence'], row['usage'])
 
     if publications is not None:
       phenotype['publications'] = self.parse_publications(row['provenance'], publications)
